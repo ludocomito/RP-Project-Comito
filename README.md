@@ -1,5 +1,8 @@
 # RP-Project-Comito
 
+Source ros2 Humble:
+`source /opt/ros/humble/setup.bash`
+
 ## Simple RVIZ
 - Write a program to control a mobile robot in ROS and display
 simple systems(rviz simple clone).
