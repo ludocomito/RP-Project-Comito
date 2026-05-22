@@ -1,2 +1,7 @@
 robotprogramming_2025_26-main
 rp_lessons
+
+build/
+install/
+log/
+.roslog/

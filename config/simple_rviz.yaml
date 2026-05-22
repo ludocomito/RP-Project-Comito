@@ -1,0 +1,28 @@
+# Runtime defaults for the viewer node; demo.launch.py can override these.
+simple_rviz_node:
+  ros__parameters:
+    fixed_frame: "map"
+    map_topic: "/map"
+
+    # Defaults match the built-in demo world while still allowing command-line
+    # overrides for other ROS graphs.
+    scan_topics: ["/laser_1/scan"]
+    particle_topics: ["/particle_cloud", "/particlecloud"]
+    robot_frames: ["robot_1"]
+    robot_radius: 0.5
+
+    initialpose_topic: "/initialpose"
+    goal_topics: ["/move_base/goal", "/goal_pose"]
+    cmd_vel_topic: "/robot_1/cmd_vel"
+
+    linear_speed: 0.25
+    angular_speed: 0.8
+    # Each key press sends a short velocity pulse, then the viewer sends zero.
+    cmd_vel_pulse_seconds: 0.2
+
+    draw_rate_hz: 20.0
+    display_scale: 1.0
+    window_name: "simple_rviz"
+
+    initialpose_xy_covariance: 0.25
+    initialpose_yaw_covariance: 0.07
