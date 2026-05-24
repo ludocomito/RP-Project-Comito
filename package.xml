@@ -3,7 +3,7 @@
 <package format="3">
   <name>rp_simple_rviz</name>
   <version>0.1.0</version>
-  <description>A compact standalone RViz-like 2D viewer and demo world for ROS 2 Humble.</description>
+  <description>A compact RViz-like 2D viewer for ROS 2 Humble.</description>
   <maintainer email="ludocomito@gmail.com">ludocomito</maintainer>
   <license>MIT</license>
 
@@ -15,6 +15,7 @@
   <depend>geometry_msgs</depend>
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
+  <depend>OpenCV</depend>
 
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
