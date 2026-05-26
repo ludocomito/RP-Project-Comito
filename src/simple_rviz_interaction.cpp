@@ -9,12 +9,15 @@
 
 namespace rp_simple_rviz {
 
+// The function that handles the keyboard events.
 void SimpleRvizNode::handleKey(int key) {
+  // If the escape key is pressed, shutdown the node.
   if (key == 27) {
     rclcpp::shutdown();
     return;
   }
 
+  // If the key is not a valid ASCII character, return.
   if (key < 0 || key > 255) return;
   const int lower = std::tolower(key);
 
@@ -49,21 +52,24 @@ void SimpleRvizNode::handleKey(int key) {
   }
 }
 
+// Handle the publishing of the command velocity.
 void SimpleRvizNode::publishCmdVel(double linear, double angular) {
+  // The stop timer is used to stop the command velocity after a certain time.
   if (cmd_vel_stop_timer_) {
     cmd_vel_stop_timer_->cancel();
   }
 
-  // Publish the requested pulse immediately.
+  // Create the command velocity message.
   geometry_msgs::msg::Twist cmd;
   cmd.linear.x = linear;
   cmd.angular.z = angular;
   cmd_vel_pub_->publish(cmd);
 
+  // If the linear and angular velocities are close to zero, return.
   if (std::abs(linear) < 1e-9 && std::abs(angular) < 1e-9) return;
   if (cmd_vel_pulse_seconds_ <= 0.0) return;
 
-  // Then schedule an automatic stop so the command is discrete.
+  // Schedule an automatic stop so the command is discrete.
   const auto delay = std::chrono::milliseconds(
       std::max(1, static_cast<int>(std::round(1000.0 * cmd_vel_pulse_seconds_))));
   cmd_vel_stop_timer_ = create_wall_timer(delay, [this]() {
@@ -74,6 +80,7 @@ void SimpleRvizNode::publishCmdVel(double linear, double angular) {
   });
 }
 
+// Publish the stop command velocity.
 void SimpleRvizNode::publishStopCmdVel() {
   geometry_msgs::msg::Twist cmd;
   cmd_vel_pub_->publish(cmd);
@@ -86,11 +93,11 @@ void SimpleRvizNode::mouseCallback(int event, int x, int y, int flags,
   if (node) node->handleMouse(event, x, y);
 }
 
-
+// Handle the mouse events.
 void SimpleRvizNode::handleMouse(int event, int x, int y) {
-  // The function that handles the mouse events.
   if (!map_msg_ || mode_ == InteractionMode::kIdle) return;
 
+  // When le
   const cv::Point map_pixel = displayToMapPixel(cv::Point(x, y));
   if (event == cv::EVENT_LBUTTONDOWN) {
     // Start point is the pose position.
@@ -106,7 +113,6 @@ void SimpleRvizNode::handleMouse(int event, int x, int y) {
   }
 
   if (event == cv::EVENT_LBUTTONUP && dragging_) {
-    // End point is only used to compute yaw.
     drag_current_pixel_ = map_pixel;
     publishInteractivePose();
     dragging_ = false;
@@ -114,15 +120,15 @@ void SimpleRvizNode::handleMouse(int event, int x, int y) {
   }
 }
 
-
+// Convert display pixel to map pixel.
 cv::Point SimpleRvizNode::displayToMapPixel(const cv::Point& display_pixel) const {
-  // Convert display pixel to map pixel.
   if (std::abs(display_scale_ - 1.0) < 1e-6) return display_pixel;
   return cv::Point(
       static_cast<int>(std::round(display_pixel.x / display_scale_)),
       static_cast<int>(std::round(display_pixel.y / display_scale_)));
 }
 
+// Publish the interactive pose.
 void SimpleRvizNode::publishInteractivePose() {
   double x0 = 0.0;
   double y0 = 0.0;
@@ -145,8 +151,8 @@ void SimpleRvizNode::publishInteractivePose() {
   }
 }
 
+// Publish the initial pose to the initialpose topic.
 void SimpleRvizNode::publishInitialPose(double x, double y, double yaw) {
-  // Publish the initial pose to the initialpose topic.
   geometry_msgs::msg::PoseWithCovarianceStamped msg;
   msg.header.stamp = now();
   msg.header.frame_id = fixed_frame_;
@@ -162,8 +168,8 @@ void SimpleRvizNode::publishInitialPose(double x, double y, double yaw) {
               initialpose_topic_.c_str(), x, y, yaw);
 }
 
+// Publish the goal to the goal topics.
 void SimpleRvizNode::publishGoal(double x, double y, double yaw) {
-  // Publish the goal to the goal topics.
   geometry_msgs::msg::PoseStamped msg;
   msg.header.stamp = now();
   msg.header.frame_id = fixed_frame_;
