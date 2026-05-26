@@ -14,12 +14,12 @@ simple_rviz_node:
     goal_topics: ["/move_base/goal", "/goal_pose"]
     cmd_vel_topic: "/robot_1/cmd_vel"
 
-    linear_speed: 0.25
+    linear_speed: 0.5
     angular_speed: 0.8
     # Each key press sends a short velocity pulse, then the viewer sends zero.
-    cmd_vel_pulse_seconds: 0.2
+    cmd_vel_pulse_seconds: 0.7
 
-    draw_rate_hz: 20.0
+    draw_rate_hz: 60.0
     display_scale: 1.0
     window_name: "simple_rviz"
 
