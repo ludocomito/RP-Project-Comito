@@ -13,6 +13,7 @@
 
 namespace {
 
+// The map server node publishes the map as an occupancy grid
 class MapServerNode : public rclcpp::Node {
  public:
   MapServerNode() : Node("simple_map_server") {
@@ -22,9 +23,11 @@ class MapServerNode : public rclcpp::Node {
     resolution_ = declare_parameter<double>("resolution", 0.1);
     origin_x_ = declare_parameter<double>("origin_x", 0.0);
     origin_y_ = declare_parameter<double>("origin_y", -98.7);
+    // The occupied threshold is the value above which a cell is considered occupied
     occupied_threshold_ =
         declare_parameter<int>("occupied_threshold", 147);
 
+    // Check if the map path is empty
     if (map_path_.empty()) {
       throw std::runtime_error("map_path parameter is required");
     }
@@ -33,6 +36,7 @@ class MapServerNode : public rclcpp::Node {
 
     loadMap();
 
+    // Create the publisher for the map
     map_pub_ = create_publisher<nav_msgs::msg::OccupancyGrid>(
         map_topic_, rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local());
     timer_ = create_wall_timer(std::chrono::seconds(1),
@@ -44,6 +48,7 @@ class MapServerNode : public rclcpp::Node {
   }
 
  private:
+  // Load the map from the file
   void loadMap() {
     const cv::Mat image = cv::imread(map_path_, cv::IMREAD_UNCHANGED);
     if (image.empty()) {
@@ -59,6 +64,7 @@ class MapServerNode : public rclcpp::Node {
       gray = image;
     }
 
+    // Create the map message
     map_msg_.header.frame_id = fixed_frame_;
     map_msg_.info.resolution = resolution_;
     map_msg_.info.width = static_cast<uint32_t>(gray.cols);
@@ -68,6 +74,8 @@ class MapServerNode : public rclcpp::Node {
     map_msg_.info.origin.orientation.w = 1.0;
     map_msg_.data.assign(static_cast<size_t>(gray.cols * gray.rows), 0);
 
+
+    // Iterate over the rows and columns of the image
     for (int row = 0; row < gray.rows; ++row) {
       for (int col = 0; col < gray.cols; ++col) {
         int8_t occupancy = 0;
@@ -75,12 +83,15 @@ class MapServerNode : public rclcpp::Node {
             image.channels() == 4 ? image.at<cv::Vec4b>(row, col)[3] : 255;
         const uint8_t value = gray.at<uint8_t>(row, col);
 
+        // If the alpha value is less than 127, the cell is considered free
         if (alpha < 127) {
           occupancy = -1;
         } else if (value < occupied_threshold_) {
+          // If the value is less than the occupied threshold, the cell is considered occupied
           occupancy = 100;
         }
 
+        // Fill the occupancy grid message
         const int grid_row = gray.rows - row - 1;
         map_msg_.data[static_cast<size_t>(grid_row * gray.cols + col)] =
             occupancy;
@@ -99,6 +110,7 @@ class MapServerNode : public rclcpp::Node {
   double resolution_ = 0.1;
   double origin_x_ = 0.0;
   double origin_y_ = -98.7;
+  // The occupied threshold is the value above which a cell is considered occupied
   int occupied_threshold_ = 147;
 
   nav_msgs::msg::OccupancyGrid map_msg_;
