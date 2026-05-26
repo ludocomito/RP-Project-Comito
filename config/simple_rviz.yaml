@@ -1,13 +1,12 @@
-# Runtime defaults for the viewer node; demo.launch.py can override these.
+# Runtime defaults for the viewer node.
 simple_rviz_node:
   ros__parameters:
     fixed_frame: "map"
     map_topic: "/map"
 
-    # Defaults match the built-in demo world while still allowing command-line
-    # overrides for other ROS graphs.
+    # Defaults can be changed to match the running robot or simulator.
     scan_topics: ["/laser_1/scan"]
-    particle_topics: ["/particle_cloud", "/particlecloud"]
+    particle_topics: ["/particle_cloud", "/particlecloud", "/particles"]
     robot_frames: ["robot_1"]
     robot_radius: 0.5
 
