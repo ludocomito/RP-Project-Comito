@@ -37,11 +37,13 @@ class DemoRobotNode : public rclcpp::Node {
         declare_parameter<std::string>("initialpose_topic", "/initialpose");
     goal_topic_ = declare_parameter<std::string>("goal_topic", "/move_base/goal");
 
+    // Robot position and orientation in the world frame
     robot_pose_.x = declare_parameter<double>("robot_x", 18.0);
     robot_pose_.y = declare_parameter<double>("robot_y", -25.0);
     robot_pose_.yaw = declare_parameter<double>("robot_yaw", 0.0);
     robot_radius_ = declare_parameter<double>("robot_radius", 0.5);
 
+    // Laser position and orientation in the robot frame
     laser_in_robot_.x = declare_parameter<double>("laser_x", 1.0);
     laser_in_robot_.y = declare_parameter<double>("laser_y", 0.0);
     laser_in_robot_.yaw = declare_parameter<double>("laser_yaw", 0.0);
@@ -54,6 +56,7 @@ class DemoRobotNode : public rclcpp::Node {
     laser_angle_increment_ =
         declare_parameter<double>("laser_angle_increment", M_PI / 180.0);
 
+    // Command timeout and update rates
     cmd_timeout_seconds_ = declare_parameter<double>("cmd_timeout_seconds", 0.4);
     update_rate_hz_ =
         std::max(1.0, declare_parameter<double>("update_rate_hz", 30.0));
@@ -64,12 +67,14 @@ class DemoRobotNode : public rclcpp::Node {
     particle_count_ = std::max(
         0, static_cast<int>(declare_parameter<int>("particle_count", 120)));
 
+    // Create publishers and subscribers
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
     scan_pub_ =
         create_publisher<sensor_msgs::msg::LaserScan>(scan_topic_, 10);
     particle_pub_ =
         create_publisher<geometry_msgs::msg::PoseArray>(particle_topic_, 10);
 
+    // Create map subscriptions
     createMapSubscriptions();
     cmd_vel_sub_ = create_subscription<geometry_msgs::msg::Twist>(
         cmd_vel_topic_, 10,
@@ -100,6 +105,7 @@ class DemoRobotNode : public rclcpp::Node {
                       msg->pose.position.y);
         });
 
+    // Create timers for updating the robot, publishing scans, and publishing particles
     update_timer_ = create_wall_timer(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::duration<double>(1.0 / update_rate_hz_)),
@@ -146,6 +152,7 @@ class DemoRobotNode : public rclcpp::Node {
     map_origin_.yaw = yawFromQuaternion(msg->info.origin.orientation);
   }
 
+  // Update the robot's position and orientation based on the command velocity
   void updateRobot() {
     const double now_seconds = now().seconds();
     double linear = 0.0;
@@ -172,6 +179,7 @@ class DemoRobotNode : public rclcpp::Node {
     publishTransforms();
   }
 
+  // Publish the robot and laser transforms to the TF tree
   void publishTransforms() {
     const auto stamp = now();
     geometry_msgs::msg::TransformStamped robot_tf;
@@ -194,16 +202,20 @@ class DemoRobotNode : public rclcpp::Node {
     tf_broadcaster_->sendTransform(laser_tf);
   }
 
+  // Publish the laser scan to the laser frame
   void publishScan() {
     if (!map_msg_) return;
 
     const Pose2D sensor_pose = composePoses(robot_pose_, laser_in_robot_);
+    
+    // Calculate the number of laser beams based on the angle range and increment
     const int beam_count = std::max(
         1, static_cast<int>(
                std::floor((laser_angle_max_ - laser_angle_min_) /
                           laser_angle_increment_)) +
                1);
 
+    // Create the laser scan message
     sensor_msgs::msg::LaserScan scan;
     scan.header.stamp = now();
     scan.header.frame_id = laser_frame_;
@@ -217,14 +229,18 @@ class DemoRobotNode : public rclcpp::Node {
     scan.ranges.assign(static_cast<size_t>(beam_count),
                        std::numeric_limits<float>::infinity());
 
+    // Calculate the step size for the laser scan
     const double step =
         std::max(0.02, static_cast<double>(map_msg_->info.resolution) * 0.5);
     for (int i = 0; i < beam_count; ++i) {
+      // Calculate the local angle for the current beam
       const double local_angle =
           laser_angle_min_ + static_cast<double>(i) * laser_angle_increment_;
       const double world_angle = sensor_pose.yaw + local_angle;
 
+      // Check each range step for obstacles
       for (double r = laser_range_min_; r <= laser_range_max_; r += step) {
+        // Calculate the world coordinates of the beam end
         const double x = sensor_pose.x + r * std::cos(world_angle);
         const double y = sensor_pose.y + r * std::sin(world_angle);
         if (isOccupied(x, y)) {
@@ -237,6 +253,7 @@ class DemoRobotNode : public rclcpp::Node {
     scan_pub_->publish(scan);
   }
 
+  // Publish the particle cloud to the fixed frame
   void publishParticles() {
     if (particle_count_ == 0) return;
 
@@ -260,6 +277,7 @@ class DemoRobotNode : public rclcpp::Node {
     particle_pub_->publish(cloud);
   }
 
+  // Convert world coordinates to grid coordinates
   bool worldToGrid(double wx, double wy, int& gx, int& gy) const {
     if (!map_msg_) return false;
 
@@ -277,20 +295,24 @@ class DemoRobotNode : public rclcpp::Node {
            gy < static_cast<int>(map_msg_->info.height);
   }
 
+  // Check if a point is occupied
   bool isOccupied(double wx, double wy) const {
     int gx = 0;
     int gy = 0;
     if (!worldToGrid(wx, wy, gx, gy)) return true;
 
     const auto width = static_cast<int>(map_msg_->info.width);
+    // Get the occupancy value from the grid
     const int occupancy =
         static_cast<int>(map_msg_->data[static_cast<size_t>(gy * width + gx)]);
     return occupancy >= 50;
   }
 
+  // Check if a pose is free of obstacles
   bool footprintFree(const Pose2D& pose) const {
     if (isOccupied(pose.x, pose.y)) return false;
 
+    // Check the robot's radius in 16 different directions
     constexpr int kSamples = 16;
     for (int i = 0; i < kSamples; ++i) {
       const double angle = 2.0 * M_PI * static_cast<double>(i) / kSamples;
@@ -311,21 +333,27 @@ class DemoRobotNode : public rclcpp::Node {
   std::string initialpose_topic_;
   std::string goal_topic_;
 
+  // Set the robot and laser poses
   Pose2D robot_pose_;
   Pose2D laser_in_robot_;
   Pose2D map_origin_;
+
+  // Set the laser range and angle parameters
   double robot_radius_ = 0.5;
   double laser_range_min_ = 0.05;
   double laser_range_max_ = 20.0;
   double laser_angle_min_ = -0.5 * M_PI;
   double laser_angle_max_ = 0.5 * M_PI;
   double laser_angle_increment_ = M_PI / 180.0;
+
+  // Set the command timeout and update rates
   double cmd_timeout_seconds_ = 0.4;
   double update_rate_hz_ = 30.0;
   double scan_rate_hz_ = 15.0;
   double particle_rate_hz_ = 2.0;
   int particle_count_ = 120;
 
+  // Set the linear and angular velocities
   double linear_velocity_ = 0.0;
   double angular_velocity_ = 0.0;
   double last_cmd_time_seconds_ = -1000.0;
