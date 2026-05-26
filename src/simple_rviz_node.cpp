@@ -9,8 +9,8 @@
 
 namespace rp_simple_rviz {
 
+// The class that implements the simple RViz node.
 SimpleRvizNode::SimpleRvizNode() : Node("simple_rviz_node") {
-  // Topic/frame parameters mirror RViz's fixed-frame idea but stay lightweight.
   fixed_frame_ = declare_parameter<std::string>("fixed_frame", "map");
   map_topic_ = declare_parameter<std::string>("map_topic", "/map");
   scan_topics_ = declare_parameter<std::vector<std::string>>(
@@ -35,9 +35,10 @@ SimpleRvizNode::SimpleRvizNode() : Node("simple_rviz_node") {
 
   linear_speed_ = declare_parameter<double>("linear_speed", 0.25);
   angular_speed_ = declare_parameter<double>("angular_speed", 0.8);
-  // Velocity commands are pulses, so one key press is one manual action.
+  // The time in seconds that the command velocity is published.
   cmd_vel_pulse_seconds_ =
       declare_parameter<double>("cmd_vel_pulse_seconds", 0.2);
+
   initialpose_xy_covariance_ =
       declare_parameter<double>("initialpose_xy_covariance", 0.25);
   initialpose_yaw_covariance_ =
@@ -114,8 +115,8 @@ void SimpleRvizNode::createParticleSubscriptions() {
   }
 }
 
+// Create the publishers for the initial pose, goal, and command velocity.
 void SimpleRvizNode::createPublishers() {
-  // These are exactly the messages requested by the project specification.
   initialpose_pub_ =
       create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
           initialpose_topic_, 10);
