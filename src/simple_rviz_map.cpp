@@ -19,6 +19,11 @@ void SimpleRvizNode::mapCallback(
     return;
   }
 
+  if (map_msg_ && msg->info == map_msg_->info && msg->data == map_msg_->data) {
+    map_msg_->header = msg->header;
+    return;
+  }
+
   map_msg_ = msg;
   map_origin_.x = msg->info.origin.position.x;
   map_origin_.y = msg->info.origin.position.y;
@@ -119,9 +124,11 @@ std::optional<Pose2D> SimpleRvizNode::lookupTransform2D(
       transform = tf_buffer_->lookupTransform(fixed_frame_, source_frame,
                                               tf2::TimePointZero);
     } else {
+      // Do not block rendering while waiting for an exact-time transform. If it
+      // is not already available, fall back immediately to the latest TF below.
       transform = tf_buffer_->lookupTransform(
           fixed_frame_, source_frame, rclcpp::Time(stamp),
-          rclcpp::Duration::from_seconds(0.03));
+          rclcpp::Duration::from_seconds(0.0));
     }
 
     return transformToPose2D(transform);
