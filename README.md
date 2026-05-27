@@ -53,6 +53,12 @@ ros2 launch rp_simple_rviz simple_rviz.launch.py
 ```
 
 Default topics and frames are in `config/simple_rviz.yaml`.
+The viewer listens for localization particles on `/particle_cloud`,
+`/particlecloud`, and `/particles`. `particle_coordinate_mode: "auto"` keeps
+normal map-frame meter particles working and also displays the pixel-coordinate
+`/particles` published by the reference `rp_ros2_rviz` particle filter.
+Use `particle_radius_px`, `particle_heading_px`, and `max_drawn_particles` to
+tune particle visibility for dense clouds or small display scales.
 
 The course `rp_simulator` can still be launched with:
 
