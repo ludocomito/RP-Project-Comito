@@ -7,6 +7,12 @@ simple_rviz_node:
     # Defaults can be changed to match the running robot or simulator.
     scan_topics: ["/laser_1/scan"]
     particle_topics: ["/particle_cloud", "/particlecloud", "/particles"]
+    # auto accepts normal map-frame meters and the older pixel-coordinate
+    # particles published by rp_ros2_rviz/particle_node_filter.
+    particle_coordinate_mode: "auto"
+    particle_radius_px: 3
+    particle_heading_px: 10
+    max_drawn_particles: 3000
     robot_frames: ["robot_1"]
     robot_radius: 0.5
 
@@ -20,7 +26,7 @@ simple_rviz_node:
     cmd_vel_pulse_seconds: 0.7
 
     draw_rate_hz: 60.0
-    display_scale: 1.0
+    display_scale: 2.0
     window_name: "simple_rviz"
 
     initialpose_xy_covariance: 0.25

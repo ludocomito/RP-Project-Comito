@@ -57,6 +57,12 @@ class SimpleRvizNode : public rclcpp::Node {
   void drawLoop();
   void show(const cv::Mat& canvas);
   void drawParticles(cv::Mat& canvas);
+  bool particleCloudUsesMapPixels(
+      const geometry_msgs::msg::PoseArray& cloud) const;
+  bool particlePoseToPixel(const geometry_msgs::msg::Pose& pose,
+                           bool uses_map_pixels, cv::Point& pixel) const;
+  void drawParticleMarker(cv::Mat& canvas, const cv::Point& pixel,
+                          double yaw, bool uses_map_pixels) const;
   void drawRobotFrames(cv::Mat& canvas);
   void drawLaserScans(cv::Mat& canvas);
   void drawInteraction(cv::Mat& canvas) const;
@@ -80,6 +86,10 @@ class SimpleRvizNode : public rclcpp::Node {
   std::string map_topic_;
   std::vector<std::string> scan_topics_;
   std::vector<std::string> particle_topics_;
+  std::string particle_coordinate_mode_;
+  int particle_radius_px_ = 3;
+  int particle_heading_px_ = 10;
+  int max_drawn_particles_ = 3000;
   std::vector<std::string> robot_frames_;
   double robot_radius_ = 0.5;
   double draw_rate_hz_ = 20.0;
