@@ -22,10 +22,10 @@ void SimpleRvizNode::drawLoop() {
     return;
   }
 
-  // Draw uncertain localization first, then robot/laser on top.
+  // Draw scans first, then particles above them so localization remains visible.
   cv::Mat canvas = map_background_.clone();
-  drawParticles(canvas);
   drawLaserScans(canvas);
+  drawParticles(canvas);
   drawRobotFrames(canvas);
   drawInteraction(canvas);
   drawMode(canvas);
@@ -49,16 +49,20 @@ void SimpleRvizNode::show(const cv::Mat& canvas) {
 
 void SimpleRvizNode::drawParticles(cv::Mat& canvas) {
   // Draw the particle clouds.
-  constexpr size_t kMaxDrawnParticles = 2000;
+  const size_t max_drawn_particles =
+      static_cast<size_t>(std::max(1, max_drawn_particles_));
 
   // Iterate over the particle clouds.
   for (const auto& item : latest_particle_clouds_) {
     const auto& cloud = item.second;
     if (!cloud || cloud->poses.empty()) continue;
 
+    const bool uses_map_pixels = particleCloudUsesMapPixels(*cloud);
+
     Pose2D cloud_in_fixed;
     bool needs_transform = false;
-    if (!cloud->header.frame_id.empty() && cloud->header.frame_id != fixed_frame_) {
+    if (!uses_map_pixels && !cloud->header.frame_id.empty() &&
+        cloud->header.frame_id != fixed_frame_) {
       const auto cloud_pose =
           lookupTransform2D(cloud->header.frame_id, cloud->header.stamp);
       if (!cloud_pose.has_value()) continue;
@@ -66,24 +70,111 @@ void SimpleRvizNode::drawParticles(cv::Mat& canvas) {
       needs_transform = true;
     }
 
-      //Subsample the particle cloud for display while keeping the cloud shape visible.
-      const size_t stride =
-        std::max<size_t>(1, cloud->poses.size() / kMaxDrawnParticles);
+    // Subsample the particle cloud for display while keeping the cloud shape
+    // visible.
+    const size_t stride =
+        std::max<size_t>(1, cloud->poses.size() / max_drawn_particles);
     for (size_t i = 0; i < cloud->poses.size(); i += stride) {
-      Pose2D particle;
-      particle.x = cloud->poses[i].position.x;
-      particle.y = cloud->poses[i].position.y;
-      particle.yaw = yawFromQuaternion(cloud->poses[i].orientation);
-
-      const Pose2D particle_in_fixed =
-          needs_transform ? composePoses(cloud_in_fixed, particle) : particle;
-
+      const auto& pose = cloud->poses[i];
       cv::Point pixel;
-      if (worldToPixel(particle_in_fixed.x, particle_in_fixed.y, pixel)) {
-        cv::circle(canvas, pixel, 1, cv::Scalar(255, 70, 70), -1);
+      double yaw = yawFromQuaternion(pose.orientation);
+
+      if (uses_map_pixels) {
+        if (!particlePoseToPixel(pose, true, pixel)) continue;
+      } else {
+        Pose2D particle;
+        particle.x = pose.position.x;
+        particle.y = pose.position.y;
+        particle.yaw = yaw;
+
+        const Pose2D particle_in_fixed =
+            needs_transform ? composePoses(cloud_in_fixed, particle) : particle;
+        if (!worldToPixel(particle_in_fixed.x, particle_in_fixed.y, pixel)) {
+          continue;
+        }
+        yaw = particle_in_fixed.yaw;
       }
+
+      drawParticleMarker(canvas, pixel, yaw, uses_map_pixels);
     }
   }
+}
+
+bool SimpleRvizNode::particleCloudUsesMapPixels(
+    const geometry_msgs::msg::PoseArray& cloud) const {
+  if (particle_coordinate_mode_ == "map_pixels" ||
+      particle_coordinate_mode_ == "pixels") {
+    return true;
+  }
+  if (particle_coordinate_mode_ == "world" ||
+      particle_coordinate_mode_ == "meters") {
+    return false;
+  }
+
+  if (!map_msg_ || cloud.poses.empty()) return false;
+
+  size_t world_visible = 0;
+  size_t pixel_visible = 0;
+  const size_t stride = std::max<size_t>(1, cloud.poses.size() / 100);
+  const int width = static_cast<int>(map_msg_->info.width);
+  const int height = static_cast<int>(map_msg_->info.height);
+
+  for (size_t i = 0; i < cloud.poses.size(); i += stride) {
+    const auto& pose = cloud.poses[i];
+
+    cv::Point world_pixel;
+    if (worldToPixel(pose.position.x, pose.position.y, world_pixel)) {
+      ++world_visible;
+    }
+
+    const int x = static_cast<int>(std::round(pose.position.x));
+    const int y = static_cast<int>(std::round(pose.position.y));
+    if (x >= 0 && y >= 0 && x < width && y < height) {
+      ++pixel_visible;
+    }
+  }
+
+  return pixel_visible > 0 &&
+         (world_visible == 0 || pixel_visible >= 3 * world_visible);
+}
+
+bool SimpleRvizNode::particlePoseToPixel(
+    const geometry_msgs::msg::Pose& pose, bool uses_map_pixels,
+    cv::Point& pixel) const {
+  if (!uses_map_pixels) {
+    return worldToPixel(pose.position.x, pose.position.y, pixel);
+  }
+
+  if (!map_msg_) return false;
+  pixel.x = static_cast<int>(std::round(pose.position.x));
+  pixel.y = static_cast<int>(std::round(pose.position.y));
+  return pixel.x >= 0 && pixel.y >= 0 &&
+         pixel.x < static_cast<int>(map_msg_->info.width) &&
+         pixel.y < static_cast<int>(map_msg_->info.height);
+}
+
+void SimpleRvizNode::drawParticleMarker(cv::Mat& canvas, const cv::Point& pixel,
+                                        double yaw,
+                                        bool uses_map_pixels) const {
+  const int radius = std::max(1, particle_radius_px_);
+  const int heading_length = std::max(0, particle_heading_px_);
+  const cv::Scalar outline(20, 20, 20);
+  const cv::Scalar color(0, 220, 255);
+
+  cv::circle(canvas, pixel, radius + 1, outline, -1, cv::LINE_AA);
+  cv::circle(canvas, pixel, radius, color, -1, cv::LINE_AA);
+  if (heading_length == 0) return;
+
+  // World-frame particles follow ROS coordinates, where +Y points upward in
+  // the map image. Pixel-coordinate particles follow OpenCV image coordinates,
+  // where +Y points downward.
+  const double image_y_sign = uses_map_pixels ? 1.0 : -1.0;
+  const cv::Point tip(
+      pixel.x + static_cast<int>(std::round(heading_length * std::cos(yaw))),
+      pixel.y + static_cast<int>(
+                    std::round(image_y_sign * heading_length * std::sin(yaw))));
+  cv::line(canvas, pixel, tip, outline, 3, cv::LINE_AA);
+  cv::arrowedLine(canvas, pixel, tip, color, 1, cv::LINE_AA, 0, 0.35);
 }
 
 void SimpleRvizNode::drawRobotFrames(cv::Mat& canvas) {

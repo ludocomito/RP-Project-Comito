@@ -17,7 +17,16 @@ SimpleRvizNode::SimpleRvizNode() : Node("simple_rviz_node") {
       "scan_topics", std::vector<std::string>{"/laser_1/scan"});
   particle_topics_ = declare_parameter<std::vector<std::string>>(
       "particle_topics",
-      std::vector<std::string>{"/particle_cloud", "/particlecloud"});
+      std::vector<std::string>{"/particle_cloud", "/particlecloud",
+                               "/particles"});
+  particle_coordinate_mode_ =
+      declare_parameter<std::string>("particle_coordinate_mode", "auto");
+  particle_radius_px_ = std::max(
+      1, static_cast<int>(declare_parameter<int>("particle_radius_px", 3)));
+  particle_heading_px_ = std::max(
+      0, static_cast<int>(declare_parameter<int>("particle_heading_px", 10)));
+  max_drawn_particles_ = std::max(
+      1, static_cast<int>(declare_parameter<int>("max_drawn_particles", 3000)));
   robot_frames_ = declare_parameter<std::vector<std::string>>(
       "robot_frames", std::vector<std::string>{"robot_1"});
 
