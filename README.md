@@ -1,5 +1,7 @@
 # RP-Project-Comito
 
+This project was realized for the exam of Robot Programming A.Y. 2025/26. It implements a ROS 2 based viewer that emulates RViz capablilities.
+
 ## Simple RVIZ
 
 ROS 2 Humble package for a small RViz-like 2D viewer.
@@ -40,8 +42,8 @@ This starts:
 
 Controls in the viewer window:
 
-- `i`: drag to publish `/initialpose`
-- `g`: drag to publish `/move_base/goal`
+- `i`: click to publish `/initialpose`
+- `g`: click to publish `/move_base/goal`
 - `w`, `a`, `s`, `d`: send short `/robot_1/cmd_vel` pulses
 - `x`: stop
 - `Esc`: close
