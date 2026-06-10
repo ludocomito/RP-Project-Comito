@@ -257,6 +257,7 @@ class DemoRobotNode : public rclcpp::Node {
   void publishParticles() {
     if (particle_count_ == 0) return;
 
+    // Add noise to the particle positions and orientations
     std::normal_distribution<double> xy_noise(0.0, 0.25);
     std::normal_distribution<double> yaw_noise(0.0, 0.18);
 
@@ -266,6 +267,7 @@ class DemoRobotNode : public rclcpp::Node {
     cloud.poses.reserve(static_cast<size_t>(particle_count_));
 
     for (int i = 0; i < particle_count_; ++i) {
+      // Create a new particle pose with noise
       geometry_msgs::msg::Pose pose;
       pose.position.x = robot_pose_.x + xy_noise(rng_);
       pose.position.y = robot_pose_.y + xy_noise(rng_);

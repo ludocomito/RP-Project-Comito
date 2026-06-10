@@ -28,7 +28,7 @@ colcon build --symlink-install
 source install/local_setup.bash
 ```
 
-## Run The Single-Window Demo
+## Run The Demo
 
 ```bash
 ros2 launch rp_simple_rviz demo.launch.py
@@ -53,22 +53,4 @@ Controls in the viewer window:
 
 ```bash
 ros2 launch rp_simple_rviz simple_rviz.launch.py
-```
 
-Default topics and frames are in `config/simple_rviz.yaml`.
-The viewer listens for localization particles on `/particle_cloud`,
-`/particlecloud`, and `/particles`. `particle_coordinate_mode: "auto"` keeps
-normal map-frame meter particles working and also displays the pixel-coordinate
-`/particles` published by the reference `rp_ros2_rviz` particle filter.
-Use `particle_radius_px`, `particle_heading_px`, and `max_drawn_particles` to
-tune particle visibility for dense clouds or small display scales.
-
-The course `rp_simulator` can still be launched with:
-
-```bash
-ros2 launch rp_simple_rviz with_simulator.launch.py
-```
-
-That simulator opens its own canvas, so use `demo.launch.py` when you want only
-the Simple RVIZ window.
--->
