@@ -4,11 +4,8 @@ simple_rviz_node:
     fixed_frame: "map"
     map_topic: "/map"
 
-    # Defaults can be changed to match the running robot or simulator.
     scan_topics: ["/laser_1/scan"]
-    particle_topics: ["/particle_cloud", "/particlecloud", "/particles"]
-    # auto accepts normal map-frame meters and the older pixel-coordinate
-    # particles published by rp_ros2_rviz/particle_node_filter.
+    particle_topics: ["/particle_cloud"]
     particle_coordinate_mode: "auto"
     particle_radius_px: 3
     particle_heading_px: 10
@@ -17,7 +14,7 @@ simple_rviz_node:
     robot_radius: 0.5
 
     initialpose_topic: "/initialpose"
-    goal_topics: ["/move_base/goal", "/goal_pose"]
+    goal_topics: ["/move_base/goal"]
     cmd_vel_topic: "/robot_1/cmd_vel"
 
     linear_speed: 0.5
