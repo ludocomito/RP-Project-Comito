@@ -48,6 +48,7 @@ Controls in the viewer window:
 - `x`: stop
 - `Esc`: close
 
+<!--
 ## Run Against Another ROS Graph
 
 ```bash
@@ -70,3 +71,4 @@ ros2 launch rp_simple_rviz with_simulator.launch.py
 
 That simulator opens its own canvas, so use `demo.launch.py` when you want only
 the Simple RVIZ window.
+-->
